@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PORTFO Config</title>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --panel: #141414;
+    --panel-2: #1c1c1c;
+    --border: #2a2a2a;
+    --accent: #ff5841;
+    --text: #f5f5f5;
+    --muted: #888;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, monospace;
+    min-height: 100vh;
+  }
+  .wrap { max-width: 520px; margin: 0 auto; padding: 24px 18px 40px; }
+  .header {
+    text-align: center;
+    padding: 16px 0 24px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
+  }
+  .header h1 {
+    margin: 0;
+    font-size: 28px;
+    letter-spacing: 4px;
+    font-weight: 800;
+    color: var(--accent);
+  }
+  .header p { margin: 6px 0 0; color: var(--muted); font-size: 12px; letter-spacing: 1px; }
+  .section-label {
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin: 0 0 10px 4px;
+  }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 18px;
+  }
+  input[type="text"], input[type="number"] {
+    width: 100%;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    padding: 10px 12px;
+    font-size: 15px;
+    font-family: inherit;
+    outline: none;
+  }
+  input:focus { border-color: var(--accent); }
+  .holding {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 10px;
+  }
+  .holding-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr auto;
+    gap: 8px;
+    align-items: center;
+  }
+  .holding-row input { padding: 8px 10px; font-size: 14px; }
+  .label {
+    display: block;
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: var(--muted);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+  }
+  .field { display: flex; flex-direction: column; }
+  .del-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    width: 32px; height: 32px;
+    border-radius: 6px;
+    font-size: 16px;
+    cursor: pointer;
+    margin-top: 14px;
+  }
+  .add-btn {
+    width: 100%;
+    background: transparent;
+    border: 1px dashed var(--border);
+    color: var(--muted);
+    padding: 12px;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 13px;
+    letter-spacing: 2px;
+    margin-top: 4px;
+  }
+  .save-btn {
+    width: 100%;
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 16px;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    margin-top: 20px;
+  }
+  .help {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 8px;
+    line-height: 1.5;
+  }
+  .help a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <h1>PORTFO</h1>
+    <p>PORTFOLIO TRACKER · CONFIG</p>
+  </div>
+
+  <div class="section-label">FINNHUB API KEY</div>
+  <div class="panel">
+    <input type="text" id="apiKey" placeholder="Paste your Finnhub key" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <div class="help">
+      Get a free key at <a href="https://finnhub.io" target="_blank">finnhub.io</a>
+    </div>
+  </div>
+
+  <div class="section-label">HOLDINGS</div>
+  <div id="holdings"></div>
+  <button class="add-btn" id="addBtn" type="button">+ ADD HOLDING</button>
+  <button class="save-btn" id="saveBtn" type="button">SAVE &amp; SYNC</button>
+</div>
+
+<script>
+  function getParam(name) {
+    var m = window.location.search.match(new RegExp('[?&]' + name + '=([^&]*)'));
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+  var MAX = 10;
+  var holdingsEl = document.getElementById('holdings');
+  var apiKeyEl = document.getElementById('apiKey');
+  apiKeyEl.value = getParam('apiKey');
+  var existing = [];
+  try {
+    var raw = getParam('holdings');
+    if (raw) existing = JSON.parse(raw);
+  } catch(e) {}
+
+  function escapeHtml(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  }
+
+  function makeHolding(data) {
+    data = data || { ticker: '', shares: '', avgPrice: '' };
+    var div = document.createElement('div');
+    div.className = 'holding';
+    div.innerHTML =
+      '<div class="holding-row">' +
+        '<div class="field"><span class="label">Ticker</span>' +
+          '<input type="text" class="t-ticker" maxlength="7" autocapitalize="characters" autocomplete="off" spellcheck="false" value="' + escapeHtml(data.ticker) + '"></div>' +
+        '<div class="field"><span class="label">Shares</span>' +
+          '<input type="number" step="0.01" class="t-shares" inputmode="decimal" value="' + (data.shares === '' ? '' : data.shares) + '"></div>' +
+        '<div class="field"><span class="label">Avg Cost</span>' +
+          '<input type="number" step="0.01" class="t-avg" inputmode="decimal" value="' + (data.avgPrice === '' ? '' : data.avgPrice) + '"></div>' +
+        '<button class="del-btn" type="button">×</button>' +
+      '</div>';
+    div.querySelector('.del-btn').addEventListener('click', function() {
+      div.remove();
+    });
+    div.querySelector('.t-ticker').​​​​​​​​​​​​​​​​
